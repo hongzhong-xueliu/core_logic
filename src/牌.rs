@@ -159,6 +159,16 @@ impl 牌 {
     pub fn 詳細id(self) -> u8 {
         self.0.get() & 0b0000_0011
     }
+
+    #[must_use]
+    pub fn isワイルドカード(self) -> bool {
+        self.詳細id() == 0b11
+    }
+
+    #[must_use]
+    pub fn is同一牌(self, other: Self) -> bool {
+        (self.0.get() >> 2) == (other.0.get() >> 2)
+    }
 }
 
 impl Debug for 牌 {
