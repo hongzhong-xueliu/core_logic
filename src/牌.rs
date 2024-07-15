@@ -169,6 +169,16 @@ impl 牌 {
     pub fn is同一牌(self, other: Self) -> bool {
         (self.0.get() >> 2) == (other.0.get() >> 2)
     }
+
+    #[must_use]
+    pub fn is次牌of(self, other: Self) -> bool {
+        (self.0.get() >> 2) == (other.0.get() >> 2) + 1
+    }
+
+    #[must_use]
+    pub fn is次次牌of(self, other: Self) -> bool {
+        (self.0.get() >> 2) == (other.0.get() >> 2) + 2
+    }
 }
 
 impl Debug for 牌 {
