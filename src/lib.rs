@@ -1,3 +1,7 @@
+#[warn(clippy::pedantic)]
+#[path = "牌.rs"]
+pub mod 牌;
+
 pub fn add(left: usize, right: usize) -> usize {
     left + right
 }
