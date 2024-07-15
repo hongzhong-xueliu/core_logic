@@ -18,7 +18,20 @@ pub fn is通常形(手牌: &Sorted手牌) -> bool {
         return 手牌[1].isワイルドカード() || 手牌[0].is同一牌(手牌[1]);
     }
 
-    todo!()
+    for i in 0..手牌.len() {
+        /* 一面子を取り除く */
+        let result = 自身より右から面子を取り除く(手牌, i);
+
+        /* その結果出てきた全ての候補について、「通常形か？」と問う */
+        for candidate in result {
+            if is通常形(&candidate) {
+                return true;
+            }
+        }
+    }
+
+    /* どのように取り除いても通常形にならない */
+    false
 }
 
 type Owned手牌 = Vec<牌>;
