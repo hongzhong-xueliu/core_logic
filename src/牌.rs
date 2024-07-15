@@ -162,7 +162,7 @@ impl 牌 {
 
     #[must_use]
     pub fn isワイルドカード(self) -> bool {
-        self.詳細id() == 0b11
+        self.0.get() >= 0b11_0000_00
     }
 
     #[must_use]
@@ -182,6 +182,10 @@ impl Debug for 牌 {
         };
         let 数 = self.数();
         let id = self.詳細id();
-        write!(f, "{数}{種類}#{id}")
+        if 種類 == "中" {
+            write!(f, "{種類}#{id}")
+        } else {
+            write!(f, "{数}{種類}#{id}")
+        }
     }
 }
