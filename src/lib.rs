@@ -1,18 +1,7 @@
-#[warn(clippy::pedantic)]
+#![warn(clippy::pedantic)]
+#![allow(clippy::unusual_byte_groupings)]
 #[path = "牌.rs"]
 pub mod 牌;
 
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+#[path = "和了.rs"]
+pub mod 和了;
