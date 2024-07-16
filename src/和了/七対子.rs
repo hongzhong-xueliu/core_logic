@@ -1,11 +1,13 @@
 use itertools::Itertools;
 
-use crate::牌::{牌, 牌の種類};
+use crate::牌::牌の種類;
+
+use super::Sorted手牌;
 
 // 四枚使い・ワイルドカードを許す
 // ソート済みを前提とする
 #[must_use]
-pub fn is七対子(手牌: &[牌]) -> bool {
+pub fn is七対子(手牌: &Sorted手牌) -> bool {
     if 手牌.len() != 14 {
         return false;
     }
@@ -30,6 +32,7 @@ pub fn is七対子(手牌: &[牌]) -> bool {
 
 #[test]
 fn test_七対子_四枚使い_true() {
+    use crate::牌::牌;
     unsafe {
         assert!(is七対子(&[
             /* 一萬#0 */ 牌::from_id(0b00_0001_00),
@@ -52,6 +55,7 @@ fn test_七対子_四枚使い_true() {
 
 #[test]
 fn test_七対子_四枚使い_false() {
+    use crate::牌::牌;
     use std::ops::Not;
     unsafe {
         assert!(is七対子(&[
@@ -76,6 +80,7 @@ fn test_七対子_四枚使い_false() {
 
 #[test]
 fn test_七対子_四枚使いとワイルドカード_true() {
+    use crate::牌::牌;
     unsafe {
         assert!(is七対子(&[
             /* 一萬#0 */ 牌::from_id(0b00_0001_00),
@@ -98,6 +103,7 @@ fn test_七対子_四枚使いとワイルドカード_true() {
 
 #[test]
 fn test_七対子_四枚使いとワイルドカード_false() {
+    use crate::牌::牌;
     use std::ops::Not;
     unsafe {
         assert!(is七対子(&[
