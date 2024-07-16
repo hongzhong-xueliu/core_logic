@@ -9,7 +9,7 @@ use std::num::NonZeroU8;
 #[derive(Clone, Copy)]
 pub struct 牌(NonZeroU8);
 
-pub enum 牌の種類 {
+pub enum 色 {
     萬 = 0,
     筒 = 1,
     索 = 2,
@@ -146,7 +146,7 @@ impl 牌 {
     }
 
     #[must_use]
-    pub fn 種類(self) -> u8 {
+    pub fn 色(self) -> u8 {
         self.0.get() >> 6
     }
 
@@ -183,7 +183,7 @@ impl 牌 {
 
 impl Debug for 牌 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let 種類 = match self.種類() {
+        let 色 = match self.色() {
             0 => "萬",
             1 => "筒",
             2 => "索",
@@ -192,10 +192,10 @@ impl Debug for 牌 {
         };
         let 数 = self.数();
         let id = self.詳細id();
-        if 種類 == "中" {
-            write!(f, "{種類}#{id}")
+        if 色 == "中" {
+            write!(f, "{色}#{id}")
         } else {
-            write!(f, "{数}{種類}#{id}")
+            write!(f, "{数}{色}#{id}")
         }
     }
 }

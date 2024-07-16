@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use crate::牌::牌の種類;
+use crate::牌::色;
 
 use super::Sorted手牌;
 
@@ -18,8 +18,8 @@ pub fn is七対子(手牌: &Sorted手牌) -> bool {
     let mut 奇数種類の個数 = 0;
     let mut ワイルドカードの枚数 = 0;
 
-    for ((種類, _), chunk) in &手牌.iter().chunk_by(|elt| (elt.種類(), elt.数())) {
-        if 種類 == 牌の種類::中 as u8 {
+    for ((種類, _), chunk) in &手牌.iter().chunk_by(|elt| (elt.色(), elt.数())) {
+        if 種類 == 色::中 as u8 {
             // 中はワイルドカードとして使える
             ワイルドカードの枚数 = chunk.count();
         } else if chunk.count() % 2 == 1 {
