@@ -6,7 +6,7 @@ use std::num::NonZeroU8;
  * 下位 2 ビットを同種牌内での個別の ID (00 - 11)
  * とすると、u8 でソートするだけで牌がソートされる。
  */
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, PartialOrd, Ord, Eq)]
 pub struct 牌(NonZeroU8);
 
 pub enum 色 {
