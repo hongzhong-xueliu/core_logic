@@ -14,7 +14,7 @@ type Owned手牌 = Vec<牌>;
 pub fn 自身より右から面子を取り除く(
     手牌: &Sorted手牌,
     index: usize,
-) -> Vec<Owned手牌> {
+) -> Vec<(Owned手牌, [牌; 3])> {
     [
         自身より右から刻子を取り除く(手牌, index),
         自身より右から順子を取り除く(手牌, index),
@@ -42,9 +42,9 @@ fn 次次牌のindex(手牌: &Sorted手牌) -> Option<usize> {
 pub fn 自身より右から順子を取り除く(
     手牌: &Sorted手牌,
     index: usize,
-) -> Vec<Owned手牌> {
+) -> Vec<(Owned手牌, [牌; 3])> {
     let left = &手牌[..index];
-    let 自身 = &手牌[index];
+    let 自身 = 手牌[index];
     let right = &手牌[index + 1..];
 
     // あと 2 枚を取り除くことができない場合をあらかじめ排除
@@ -61,7 +61,7 @@ pub fn 自身より右から順子を取り除く(
     // 真右の牌が「次牌」または「次次牌」であるかどうかを見る
 
     // 真右が「次次牌」なら、わりと簡単
-    if right[0].is次次牌of(*自身) {
+    if right[0].is次次牌of(自身) {
         // 真右が「次次牌」なので、ワイルドカードを消費するしかない
         // 「ワイルドカードを 1 枚消費する」のみが許される
 
@@ -69,14 +69,14 @@ pub fn 自身より右から順子を取り除く(
             // ワイルドカードを 1 枚、次次牌を 1 枚消費する
             // a[bcde]f
             let result: Owned手牌 = [left, &right[1..right.len() - 1]].concat();
-            return vec![result];
+            return vec![(result, [自身, right[0], right[right.len() - 1]])];
         }
 
         return vec![];
     }
 
     // 真右が「次牌」かどうかを見る
-    if right[0].is次牌of(*自身) {
+    if right[0].is次牌of(自身) {
         // 真右に来る牌が「次牌」。さらに右を見なくてはいけない
         // ここで、
         // - 123 パターン（おめでとう）
@@ -102,7 +102,7 @@ pub fn 自身より右から順子を取り除く(
                         &right[1..right.len() - 1], /* 末尾の中がない */
                     ]
                     .concat();
-                    vec![result]
+                    vec![(result, [自身, right[0], right[right.len() - 1]])]
                 }
                 (false, Some(index)) => {
                     // 122 パターンで、ワイルドカードがないが次次牌があるので、
@@ -114,31 +114,40 @@ pub fn 自身より右から順子を取り除く(
                         &right[index + 1..right.len()],
                     ]
                     .concat();
-                    vec![result]
+                    vec![(result, [自身, right[0], right[index]])]
                 }
                 (true, Some(index)) => {
                     // 122 パターンで、ワイルドカードも次次牌もあるので、
                     // 123, 12中, 1中3 の 3 通りを取り除いたものを返す
                     vec![
-                        [
-                            left,
-                            /* 自身と right[0] がなくて */
-                            &right[1..index], /* right[index] がない */
-                            &right[index + 1..right.len()],
-                        ] /* これで 123 の除去 */
-                        .concat(),
-                        [
-                            left,
-                            /* 自身と right[0] がなくて */
-                            &right[1..right.len() - 1], /* 末尾の中がない */
-                        ] /* これで 12中の除去 */
-                        .concat(),
-                        [
-                            left,                               /* 自身がなくて */
-                            &right[0..index],                   /* right[index] がなくて */
-                            &right[index + 1..right.len() - 1], /* 末尾の中がない */
-                        ] /* これで 1中3の除去 */
-                        .concat(),
+                        (
+                            [
+                                left,
+                                /* 自身と right[0] がなくて */
+                                &right[1..index], /* right[index] がない */
+                                &right[index + 1..right.len()],
+                            ] /* これで 123 の除去 */
+                            .concat(),
+                            [自身, right[0], right[index]],
+                        ),
+                        (
+                            [
+                                left,
+                                /* 自身と right[0] がなくて */
+                                &right[1..right.len() - 1], /* 末尾の中がない */
+                            ] /* これで 12中の除去 */
+                            .concat(),
+                            [自身, right[0], right[right.len() - 1]],
+                        ),
+                        (
+                            [
+                                left,                               /* 自身がなくて */
+                                &right[0..index],                   /* right[index] がなくて */
+                                &right[index + 1..right.len() - 1], /* 末尾の中がない */
+                            ] /* これで 1中3の除去 */
+                            .concat(),
+                            [自身, right[index], right[right.len() - 1]],
+                        ),
                     ]
                 }
             };
@@ -146,7 +155,7 @@ pub fn 自身より右から順子を取り除く(
             // 123 パターン。おめでとう
             // ワイルドカードがないなら、123 のみ取り除いて返す
 
-            let remove_123 = [left, &right[2..]].concat();
+            let remove_123 = ([left, &right[2..]].concat(), [自身, right[0], right[1]]);
 
             if !right[right.len() - 1].isワイルドカード() {
                 return vec![remove_123];
@@ -155,19 +164,25 @@ pub fn 自身より右から順子を取り除く(
             // ワイルドカードがあるなら、123, 12中, 1中3 の 3 通りを取り除いたものを返す
             return vec![
                 remove_123,
-                [
-                    left,
-                    /* 自身 および right[0] がなくて */
-                    &right[1..right.len() - 1], /* 末尾の中がない */
-                ]
-                .concat(),
-                [
-                    left,
-                    /* 自身がなくて */ &[right[0]],
-                    /* right[1] がなくて */
-                    &right[2..right.len() - 1], /* 末尾の中がない */
-                ]
-                .concat(),
+                (
+                    [
+                        left,
+                        /* 自身 および right[0] がなくて */
+                        &right[1..right.len() - 1], /* 末尾の中がない */
+                    ]
+                    .concat(),
+                    [自身, right[0], right[right.len() - 1]],
+                ),
+                (
+                    [
+                        left,
+                        /* 自身がなくて */ &[right[0]],
+                        /* right[1] がなくて */
+                        &right[2..right.len() - 1], /* 末尾の中がない */
+                    ]
+                    .concat(),
+                    [自身, right[1], right[right.len() - 1]],
+                ),
             ];
         }
         // 124 パターン。ワイルド消費義務
@@ -175,7 +190,7 @@ pub fn 自身より右から順子を取り除く(
         // これが唯一解
         if right[right.len() - 1].isワイルドカード() {
             let result: Owned手牌 = [left, &right[1..right.len() - 1]].concat();
-            return vec![result];
+            return vec![(result, [自身, right[0], right[right.len() - 1]])];
         }
         return vec![];
     }
@@ -213,7 +228,7 @@ pub fn 自身より右から順子を取り除く(
                     /* 末尾の中を外す */
                 ]
                 .concat();
-                return vec![result];
+                return vec![(result, [自身, right[ind], right[right.len() - 1]])];
             }
             return vec![];
         }
@@ -232,40 +247,49 @@ pub fn 自身より右から順子を取り除く(
                     &right[b + 1..right.len()],
                 ]
                 .concat();
-                return vec![result];
+                return vec![(result, [自身, right[a], right[b]])];
             }
 
             // 123, 12中, 1中3 の 3 通りを取り除いたものを返す
 
             return vec![
-                [
-                    left,
-                    /* 自身を外す */
-                    &right[0..a],
-                    /* right[a] を外す */
-                    &right[a + 1..b],
-                    /* right[b] を外す */
-                    &right[b + 1..right.len()],
-                ]
-                .concat(),
-                [
-                    left,
-                    /* 自身を外す */
-                    &right[0..a],
-                    /* right[a] を外す */
-                    &right[a + 1..right.len() - 1],
-                    /* 末尾の中を外す */
-                ]
-                .concat(),
-                [
-                    left,
-                    /* 自身を外す */
-                    &right[0..b],
-                    /* right[b] を外す */
-                    &right[b + 1..right.len() - 1],
-                    /* 末尾の中を外す */
-                ]
-                .concat(),
+                (
+                    [
+                        left,
+                        /* 自身を外す */
+                        &right[0..a],
+                        /* right[a] を外す */
+                        &right[a + 1..b],
+                        /* right[b] を外す */
+                        &right[b + 1..right.len()],
+                    ]
+                    .concat(),
+                    [自身, right[a], right[b]],
+                ),
+                (
+                    [
+                        left,
+                        /* 自身を外す */
+                        &right[0..a],
+                        /* right[a] を外す */
+                        &right[a + 1..right.len() - 1],
+                        /* 末尾の中を外す */
+                    ]
+                    .concat(),
+                    [自身, right[a], right[right.len() - 1]],
+                ),
+                (
+                    [
+                        left,
+                        /* 自身を外す */
+                        &right[0..b],
+                        /* right[b] を外す */
+                        &right[b + 1..right.len() - 1],
+                        /* 末尾の中を外す */
+                    ]
+                    .concat(),
+                    [自身, right[b], right[right.len() - 1]],
+                ),
             ];
         }
     }
@@ -279,9 +303,9 @@ pub fn 自身より右から順子を取り除く(
 pub fn 自身より右から刻子を取り除く(
     手牌: &Sorted手牌,
     index: usize,
-) -> Vec<Owned手牌> {
+) -> Vec<(Owned手牌, [牌; 3])> {
     let left = &手牌[..index];
-    let 自身 = &手牌[index];
+    let 自身 = 手牌[index];
     let right = &手牌[index + 1..];
 
     // あと 2 枚を取り除くことができない場合をあらかじめ排除
@@ -293,7 +317,7 @@ pub fn 自身より右から刻子を取り除く(
         // 自身より右にはワイルドカードしかないので、そいつらのうち 2 枚を取り除くだけでよい
         // これが唯一解
         let result: Owned手牌 = [left, &right[2..]].concat();
-        return vec![result];
+        return vec![(result, [自身, right[0], right[1]])];
     }
 
     if !自身.is同一牌(right[0]) {
@@ -302,7 +326,10 @@ pub fn 自身より右から刻子を取り除く(
         // ソートされている前提なので、ワイルドカードが「最後から 2 枚目」にあるかどうかが判定条件
         if right[right.len() - 2].isワイルドカード() {
             let result: Owned手牌 = [left, &right[..right.len() - 2]].concat();
-            return vec![result];
+            return vec![(
+                result,
+                [自身, right[right.len() - 2], right[right.len() - 1]],
+            )];
         }
 
         // さもなければ、ワイルドカードが足りないので解なし
@@ -315,20 +342,23 @@ pub fn 自身より右から刻子を取り除く(
         // 自身が足りない
         // 「ワイルドカードを 1 枚消費する」または「ワイルドカードを 2 枚消費する」が許される
 
-        let mut candidate: Vec<Owned手牌> = vec![];
+        let mut candidate: Vec<(Owned手牌, [牌; 3])> = vec![];
 
         // 「ワイルドカードを 2 枚消費する」のとき
         // [abcd]ef
         if right[right.len() - 2].isワイルドカード() {
             let result: Owned手牌 = [left, &right[..right.len() - 2]].concat();
-            candidate.push(result);
+            candidate.push((
+                result,
+                [自身, right[right.len() - 2], right[right.len() - 1]],
+            ));
         }
 
         // ワイルドカードを 1 枚、自身を 1 枚消費する
         // a[bcde]f
         if right[right.len() - 1].isワイルドカード() {
             let result: Owned手牌 = [left, &right[1..right.len() - 1]].concat();
-            candidate.push(result);
+            candidate.push((result, [自身, right[0], right[right.len() - 1]]));
         }
 
         return candidate;
@@ -338,26 +368,29 @@ pub fn 自身より右から刻子を取り除く(
 
     // 「ワイルドカードを 0 枚消費する」または「ワイルドカードを 1 枚消費する」または「ワイルドカードを 2 枚消費する」が許される
 
-    let mut candidate: Vec<Owned手牌> = vec![];
+    let mut candidate: Vec<(Owned手牌, [牌; 3])> = vec![];
 
     // 「ワイルドカードを 2 枚消費する」のとき
     // [abcd]ef
     if right[right.len() - 2].isワイルドカード() {
         let result: Owned手牌 = [left, &right[..right.len() - 2]].concat();
-        candidate.push(result);
+        candidate.push((
+            result,
+            [自身, right[right.len() - 2], right[right.len() - 1]],
+        ));
     }
 
     // ワイルドカードを 1 枚、自身を 1 枚消費する
     // a[bcde]f
     if right[right.len() - 1].isワイルドカード() {
         let result: Owned手牌 = [left, &right[1..right.len() - 1]].concat();
-        candidate.push(result);
+        candidate.push((result, [自身, right[0], right[right.len() - 1]]));
     }
 
     // 自身を 2 枚消費する
     // ab[cdef]
     let result: Owned手牌 = [left, &right[2..right.len()]].concat();
-    candidate.push(result);
+    candidate.push((result, [自身, right[0], right[1]]));
 
     candidate
 }
@@ -378,7 +411,7 @@ fn 刻子除去0() {
 
     let result = 自身より右から刻子を取り除く(&手牌, 0);
     assert_eq!(result.len(), 1);
-    assert_eq!(format!("{:?}", result[0]), "[]");
+    assert_eq!(format!("{:?}", result[0]), "([], [1索#0, 1索#1, 1索#2])");
 }
 
 #[test]
@@ -407,10 +440,10 @@ fn 刻子除去() {
     // 正しくは、詳細ID を無視して、牌の種類だけで比較するべき
     assert_eq!(
         format!("{:?}", result[0]),
-        "[1索#0, 3索#1, 4索#1, 5索#1, 9索#1]"
+        "([1索#0, 3索#1, 4索#1, 5索#1, 9索#1], [3索#0, 中#1, 中#2])"
     );
     assert_eq!(
         format!("{:?}", result[1]),
-        "[1索#0, 4索#1, 5索#1, 9索#1, 中#1]"
+        "([1索#0, 4索#1, 5索#1, 9索#1, 中#1], [3索#0, 3索#1, 中#2])"
     );
 }

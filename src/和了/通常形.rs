@@ -24,7 +24,8 @@ pub fn is通常形(手牌: &Sorted手牌) -> bool {
         let result = 自身より右から面子を取り除く(手牌, i);
 
         /* その結果出てきた全ての候補について、「通常形か？」と問う */
-        for candidate in result {
+        /* ここでは面子の情報を捨てているが、これを集めれば「どの面子で構成されているか」も取得できる */
+        for (candidate, _面子) in result {
             if is通常形(&candidate) {
                 return true;
             }
