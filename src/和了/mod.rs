@@ -11,3 +11,8 @@ pub mod 面子除去;
 
 // TODO: ソートされているという前提を課しているので、ソートされていないものが誤って入ってこないように private struct でも作って守る
 pub type Sorted手牌 = [牌];
+
+#[must_use]
+pub fn is和了(手牌: &Sorted手牌) -> bool {
+    通常形::is通常形(手牌) || 七対子::is七対子(手牌)
+}
