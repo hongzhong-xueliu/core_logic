@@ -26,6 +26,7 @@ fn main() {
             game_state.player_data[current_player].手牌
         );
 
+        println!("河: {:?}", game_state.player_data.iter().map(|p| p.河.clone()).collect::<Vec<_>>());
         println!("ツモ牌: {ツモ牌:?}");
 
         if core_logic::和了::待ち牌(
