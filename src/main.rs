@@ -2,8 +2,23 @@ use core_logic::牌;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 
-/// 「全部俺」モード
 fn main() {
+    let mut game_state = initialize_with_全部俺();
+
+    // TODO: 手番を順番に回し、ツモ牌を教え、ツモ上がり可能であるかを判定し、上がらないならクライアントから捨てるべき牌の情報を受け取る
+}
+
+struct PlayerData {
+    手牌: Vec<牌::牌>,
+    欠色: u8,
+}
+
+struct InitializedGameState {
+    player_data: [PlayerData; 4],
+    remaining: Vec<牌::牌>,
+}
+
+fn initialize_with_全部俺() -> InitializedGameState {
     // 初期配牌#1
     let mut rng = thread_rng();
     let mut y = 牌::全牌一覧.to_vec();
@@ -108,5 +123,25 @@ fn main() {
     println!("プレイヤー2の欠色: {}", 欠色s[2]);
     println!("プレイヤー3の欠色: {}", 欠色s[3]);
 
-    // TODO: 手番を順番に回し、ツモ牌を教え、ツモ上がり可能であるかを判定し、上がらないならクライアントから捨てるべき牌の情報を受け取る
+    InitializedGameState {
+        remaining,
+        player_data: [
+            PlayerData {
+                手牌: 手牌s[0].clone(),
+                欠色: 欠色s[0],
+            },
+            PlayerData {
+                手牌: 手牌s[1].clone(),
+                欠色: 欠色s[1],
+            },
+            PlayerData {
+                手牌: 手牌s[2].clone(),
+                欠色: 欠色s[2],
+            },
+            PlayerData {
+                手牌: 手牌s[3].clone(),
+                欠色: 欠色s[3],
+            },
+        ],
+    }
 }
