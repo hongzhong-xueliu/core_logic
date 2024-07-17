@@ -1,4 +1,4 @@
-use crate::牌::{全牌一覧, 牌};
+use crate::牌::{全牌一覧, 牌, 色};
 
 #[path = "七対子.rs"]
 pub mod 七対子;
@@ -18,12 +18,13 @@ pub fn is和了(手牌: &Sorted手牌) -> bool {
 }
 
 #[must_use]
-pub fn is和了and欠色(手牌: &Sorted手牌, 欠色: u8) -> bool {
+pub fn is和了and欠色(手牌: &Sorted手牌, 欠色: 色) -> bool {
+    // TODO: 実は欠色は"中"を選べない
     手牌.iter().filter(|&x| x.色() == 欠色).count() == 0 && is和了(手牌)
 }
 
 #[must_use]
-pub fn 待ち牌(手牌: &Sorted手牌, 欠色: u8) -> Vec<牌> {
+pub fn 待ち牌(手牌: &Sorted手牌, 欠色: 色) -> Vec<牌> {
     let mut result = Vec::new();
 
     for x in 全牌一覧 {

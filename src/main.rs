@@ -2,8 +2,142 @@ use core_logic::牌;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 
-fn main() {
+use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
+use futures_util::{sink::SinkExt, stream::StreamExt};
+use serde::{Deserialize, Serialize};
+use tokio::net::TcpListener;
+use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::Mutex;
+
+use std::cell::OnceCell;
+
+#[derive(Debug, Deserialize)]
+struct Discard {
+    index: usize,
+}
+
+#[derive(Debug, Deserialize)]
+struct ToWinOnSelfDraw {
+    value: bool,
+}
+
+#[derive(Debug, Deserialize)]
+struct ClientHello;
+
+#[derive(Debug, Deserialize)]
+enum ClientMessage {
+    ClientHello(ClientHello),
+    Discard(Discard),
+    ToWinOnSelfDraw(ToWinOnSelfDraw),
+}
+
+#[derive(Debug, Serialize)]
+struct Game {
+    欠色: [String; 4],
+}
+
+#[derive(Debug, Serialize)]
+struct Display {
+    player_id: usize,
+    手牌: Vec<String>,
+    河: Vec<Vec<String>>,
+    ツモ牌: String,
+    ツモ和了可能性: bool,
+}
+
+#[derive(Debug, Serialize)]
+struct Error {
+    reason: String,
+}
+
+#[derive(Debug, Serialize)]
+enum DiscardRequest {
+    ツモ,
+    選択制,
+}
+
+#[derive(Debug, Serialize)]
+enum ServerMessage {
+    Game(Game),
+    Display(Display),
+    DiscardRequest(DiscardRequest),
+    Error(Error),
+}
+
+static SOCKET: Mutex<OnceCell<(Sender<ClientMessage>, Receiver<ServerMessage>)>> =
+    Mutex::const_new(OnceCell::new());
+
+async fn handle_socket(mut socket: WebSocket) {
+    println!("Connection established!");
+
+    let Some((c_tx, mut s_rx)) = SOCKET.lock().await.take() else {
+        println!("Connection is already taken.");
+        socket
+            .send(Message::Text(
+                serde_json::to_string(&ServerMessage::Error(Error {
+                    reason: "Connection is already taken".to_string(),
+                }))
+                .unwrap(),
+            ))
+            .await
+            .unwrap();
+
+        return;
+    };
+
+    let (mut sender, mut receiver) = socket.split();
+
+    tokio::spawn(async move {
+        loop {
+            sender
+                .send(Message::Text(
+                    serde_json::to_string(&s_rx.recv().await.unwrap()).unwrap(),
+                ))
+                .await
+                .unwrap()
+        }
+    });
+
+    loop {
+        let Message::Text(m) = receiver.next().await.unwrap().unwrap() else {
+            continue;
+        };
+
+        c_tx.send(serde_json::from_str(&m).unwrap()).await.unwrap();
+    }
+}
+
+async fn handler(ws: WebSocketUpgrade) -> axum::response::Response {
+    ws.on_upgrade(handle_socket)
+}
+
+#[tokio::main]
+async fn main() {
+    let listener = TcpListener::bind("0.0.0.0:1313").await.unwrap();
+
+    let (s_tx, s_rx) = tokio::sync::mpsc::channel(32);
+    let (c_tx, mut c_rx) = tokio::sync::mpsc::channel(32);
+
+    SOCKET.lock().await.set((c_tx, s_rx)).unwrap();
+
+    tokio::spawn(async move {
+        axum::serve(listener, axum::Router::new().fallback(handler))
+            .await
+            .unwrap();
+    });
+
     let mut game_state = initialize_with_全部俺();
+
+    s_tx.send(ServerMessage::Game(Game {
+        欠色: [
+            game_state.player_data[0].欠色.to_string(),
+            game_state.player_data[1].欠色.to_string(),
+            game_state.player_data[2].欠色.to_string(),
+            game_state.player_data[3].欠色.to_string(),
+        ],
+    }))
+    .await
+    .unwrap();
 
     println!("\n\n--------------------------------------------------");
     println!("|  打牌開始");
@@ -14,6 +148,13 @@ fn main() {
     loop {
         let Some(ツモ牌) = game_state.remaining.pop() else {
             println!("山が空になりました。ゲーム終了です。");
+
+            s_tx.send(ServerMessage::Error(Error {
+                reason: "山が空".to_string(),
+            }))
+            .await
+            .unwrap();
+
             break;
         };
 
@@ -21,24 +162,46 @@ fn main() {
             "\n\n========= ↓ 以下、プレイヤー{current_player}の選択 ↓ ========================="
         );
 
-        println!(
-            "あなたの手牌: {:?}",
-            game_state.player_data[current_player].手牌
-        );
+        let 手牌 = game_state.player_data[current_player].手牌.clone();
+        println!("あなたの手牌: {手牌:?}",);
 
-        println!("河: {:?}", game_state.player_data.iter().map(|p| p.河.clone()).collect::<Vec<_>>());
+        let 河 = game_state
+            .player_data
+            .iter()
+            .map(|p| p.河.iter().map(|牌| 牌.to_string()).collect())
+            .collect::<Vec<_>>();
+
+        println!("河: {河:?}",);
         println!("ツモ牌: {ツモ牌:?}");
 
-        if core_logic::和了::待ち牌(
+        let ツモ和了可能性 = core_logic::和了::待ち牌(
             &game_state.player_data[current_player].手牌,
             game_state.player_data[current_player].欠色,
         )
-        .contains(&ツモ牌)
-        {
+        .contains(&ツモ牌);
+
+        s_tx.send(ServerMessage::Display(Display {
+            player_id: current_player,
+            手牌: 手牌.iter().map(|牌| 牌.to_string()).collect(),
+            河,
+            ツモ牌: ツモ牌.to_string(),
+            ツモ和了可能性,
+        }))
+        .await
+        .unwrap();
+
+        if ツモ和了可能性 {
             println!("ツモ和了りできます。和了りますか？ (Y/n)");
-            let mut 和了る = String::new();
-            std::io::stdin().read_line(&mut 和了る).unwrap();
-            if 和了る.trim().to_lowercase() == "n" {
+
+            let 和了る = loop {
+                if let ClientMessage::ToWinOnSelfDraw(ToWinOnSelfDraw { value }) =
+                    c_rx.recv().await.unwrap()
+                {
+                    break value;
+                }
+            };
+
+            if 和了る {
                 println!("和了りませんでした。");
             } else {
                 println!("和了りました。");
@@ -49,9 +212,17 @@ fn main() {
         // 既に和了済の場合は、ツモ切りしかできない
         if game_state.player_data[current_player].和了回数 > 0 {
             println!("ツモ切ります。");
+            s_tx.send(ServerMessage::DiscardRequest(DiscardRequest::ツモ))
+                .await
+                .unwrap();
+
             game_state.player_data[current_player].河.push(ツモ牌);
         } else {
             // そうでない場合は、ツモ切りか捨てる牌を選択する
+            s_tx.send(ServerMessage::DiscardRequest(DiscardRequest::選択制))
+                .await
+                .unwrap();
+
             print!("あなたの手牌: [");
             for (j, 牌) in game_state.player_data[current_player]
                 .手牌
@@ -70,14 +241,21 @@ fn main() {
 
             println!("捨てる牌の index を指定してください。",);
             let index = loop {
-                let mut index = String::new();
-                std::io::stdin().read_line(&mut index).unwrap();
-                let index: usize = index.trim().parse().unwrap();
-                if index > game_state.player_data[current_player].手牌.len() {
-                    println!("index out of bounds. try again");
-                    continue;
+                // let mut index = String::new();
+                // std::io::stdin().read_line(&mut index).unwrap();
+                // let index: usize = index.trim().parse().unwrap();
+                // if index > game_state.player_data[current_player].手牌.len() {
+                //     println!("index out of bounds. try again");
+                //     continue;
+                // }
+                // break index;
+                if let ClientMessage::Discard(Discard { index }) = c_rx.recv().await.unwrap() {
+                    if index > game_state.player_data[current_player].手牌.len() {
+                        println!("index out of bounds. try again");
+                        continue;
+                    }
+                    break index;
                 }
-                break index;
             };
             game_state.player_data[current_player].手牌.push(ツモ牌);
             let 捨て牌 = game_state.player_data[current_player].手牌.remove(index);
@@ -91,7 +269,7 @@ fn main() {
 
 struct PlayerData {
     手牌: Vec<牌::牌>,
-    欠色: u8,
+    欠色: 牌::色,
     和了回数: u32,
     河: Vec<牌::牌>,
 }
@@ -185,7 +363,7 @@ fn initialize_with_全部俺() -> InitializedGameState {
     println!("|  欠色選択");
     println!("--------------------------------------------------");
 
-    let mut 欠色s: [u8; 4] = [0; 4];
+    let mut 欠色s: [牌::色; 4] = [牌::色::中; 4];
     for (i, 欠色) in &mut 欠色s.iter_mut().enumerate() {
         println!("\n\n========= ↓ 以下、プレイヤー{i}の選択 ↓ =========================");
         *欠色 = loop {
@@ -198,7 +376,7 @@ fn initialize_with_全部俺() -> InitializedGameState {
                 println!("0, 1, 2 のいずれかを入力してください。");
                 continue;
             }
-            break 欠色;
+            break unsafe { std::mem::transmute(欠色) };
         };
     }
     println!("プレイヤー0の欠色: {}", 欠色s[0]);

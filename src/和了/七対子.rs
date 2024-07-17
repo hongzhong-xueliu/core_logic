@@ -19,7 +19,7 @@ pub fn is七対子(手牌: &Sorted手牌) -> bool {
     let mut ワイルドカードの枚数 = 0;
 
     for ((種類, _), chunk) in &手牌.iter().chunk_by(|elt| (elt.色(), elt.数())) {
-        if 種類 == 色::中 as u8 {
+        if 種類 == 色::中 {
             // 中はワイルドカードとして使える
             ワイルドカードの枚数 = chunk.count();
         } else if chunk.count() % 2 == 1 {

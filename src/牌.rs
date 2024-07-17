@@ -9,11 +9,24 @@ use std::num::NonZeroU8;
 #[derive(Clone, Copy, PartialEq, PartialOrd, Ord, Eq)]
 pub struct 牌(NonZeroU8);
 
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum 色 {
     萬 = 0,
     筒 = 1,
     索 = 2,
     中 = 3,
+}
+
+impl std::fmt::Display for 色 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::萬 => write!(f, "萬"),
+            Self::筒 => write!(f, "筒"),
+            Self::索 => write!(f, "索"),
+            Self::中 => write!(f, "中"),
+        }
+    }
 }
 
 pub const 全牌一覧: [牌; 108 + 4] = unsafe {
@@ -146,8 +159,10 @@ impl 牌 {
     }
 
     #[must_use]
-    pub fn 色(self) -> u8 {
-        self.0.get() >> 6
+    pub fn 色(self) -> 色 {
+        // u8 なので 6 bit 右シフトすることで残り 2bit。
+        // 色は2bitの取りうる値すべてをカバーするのでOK。
+        unsafe { std::mem::transmute(self.0.get() >> 6) }
     }
 
     #[must_use]
@@ -183,19 +198,25 @@ impl 牌 {
 
 impl Debug for 牌 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let 色 = match self.色() {
-            0 => "萬",
-            1 => "筒",
-            2 => "索",
-            3 => "中",
-            _ => unreachable!(),
-        };
+        let 色 = self.色();
         let 数 = self.数();
         let id = self.詳細id();
-        if 色 == "中" {
+        if 色 == 色::中 {
             write!(f, "{色}#{id}")
         } else {
             write!(f, "{数}{色}#{id}")
+        }
+    }
+}
+
+impl std::fmt::Display for 牌 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let 色 = self.色();
+        let 数 = self.数();
+        if 色 == 色::中 {
+            write!(f, "{色}")
+        } else {
+            write!(f, "{数}{色}")
         }
     }
 }
