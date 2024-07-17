@@ -6,7 +6,6 @@ use super::Sorted手牌;
 /// # Panics
 /// 手牌の長さが 3n+2 枚でない場合
 pub fn is通常形(手牌: &Sorted手牌) -> bool {
-    println!("{}{:?}", "=".repeat(14 - 手牌.len()), 手牌);
     assert!(
         手牌.len() % 3 == 2,
         "手牌の長さが不正です。この関数には 3n+2 枚の手牌が必要です。"

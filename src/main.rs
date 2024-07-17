@@ -5,12 +5,94 @@ use rand::{thread_rng, Rng};
 fn main() {
     let mut game_state = initialize_with_全部俺();
 
-    // TODO: 手番を順番に回し、ツモ牌を教え、ツモ上がり可能であるかを判定し、上がらないならクライアントから捨てるべき牌の情報を受け取る
+    println!("\n\n--------------------------------------------------");
+    println!("|  打牌開始");
+    println!("--------------------------------------------------");
+
+    let mut current_player = 0;
+
+    loop {
+        let Some(ツモ牌) = game_state.remaining.pop() else {
+            println!("山が空になりました。ゲーム終了です。");
+            break;
+        };
+
+        println!(
+            "\n\n========= ↓ 以下、プレイヤー{current_player}の選択 ↓ ========================="
+        );
+
+        println!(
+            "あなたの手牌: {:?}",
+            game_state.player_data[current_player].手牌
+        );
+
+        println!("ツモ牌: {ツモ牌:?}");
+
+        if core_logic::和了::待ち牌(
+            &game_state.player_data[current_player].手牌,
+            game_state.player_data[current_player].欠色,
+        )
+        .contains(&ツモ牌)
+        {
+            println!("ツモ和了りできます。和了りますか？ (Y/n)");
+            let mut 和了る = String::new();
+            std::io::stdin().read_line(&mut 和了る).unwrap();
+            if 和了る.trim().to_lowercase() == "n" {
+                println!("和了りませんでした。");
+            } else {
+                println!("和了りました。");
+                game_state.player_data[current_player].和了回数 += 1;
+            }
+        }
+
+        // 既に和了済の場合は、ツモ切りしかできない
+        if game_state.player_data[current_player].和了回数 > 0 {
+            println!("ツモ切ります。");
+            game_state.player_data[current_player].河.push(ツモ牌);
+        } else {
+            // そうでない場合は、ツモ切りか捨てる牌を選択する
+            print!("あなたの手牌: [");
+            for (j, 牌) in game_state.player_data[current_player]
+                .手牌
+                .iter()
+                .enumerate()
+            {
+                if j != 0 {
+                    print!(", ");
+                }
+                print!("{j}: {牌:?}");
+            }
+            println!(
+                "] + [{}: {ツモ牌:?}]",
+                game_state.player_data[current_player].手牌.len()
+            );
+
+            println!("捨てる牌の index を指定してください。",);
+            let index = loop {
+                let mut index = String::new();
+                std::io::stdin().read_line(&mut index).unwrap();
+                let index: usize = index.trim().parse().unwrap();
+                if index > game_state.player_data[current_player].手牌.len() {
+                    println!("index out of bounds. try again");
+                    continue;
+                }
+                break index;
+            };
+            game_state.player_data[current_player].手牌.push(ツモ牌);
+            let 捨て牌 = game_state.player_data[current_player].手牌.remove(index);
+            game_state.player_data[current_player].手牌.sort();
+            game_state.player_data[current_player].河.push(捨て牌);
+        }
+
+        current_player = (current_player + 1) % 4;
+    }
 }
 
 struct PlayerData {
     手牌: Vec<牌::牌>,
     欠色: u8,
+    和了回数: u32,
+    河: Vec<牌::牌>,
 }
 
 struct InitializedGameState {
@@ -67,7 +149,7 @@ fn initialize_with_全部俺() -> InitializedGameState {
                 std::io::stdin().read_line(&mut index).unwrap();
                 let index: usize = index.trim().parse().unwrap();
                 if index >= 手牌.len() {
-                    println!("index out of bounds");
+                    println!("index out of bounds. try again");
                     continue;
                 }
                 break index;
@@ -129,18 +211,26 @@ fn initialize_with_全部俺() -> InitializedGameState {
             PlayerData {
                 手牌: 手牌s[0].clone(),
                 欠色: 欠色s[0],
+                和了回数: 0,
+                河: Vec::new(),
             },
             PlayerData {
                 手牌: 手牌s[1].clone(),
                 欠色: 欠色s[1],
+                和了回数: 0,
+                河: Vec::new(),
             },
             PlayerData {
                 手牌: 手牌s[2].clone(),
                 欠色: 欠色s[2],
+                和了回数: 0,
+                河: Vec::new(),
             },
             PlayerData {
                 手牌: 手牌s[3].clone(),
                 欠色: 欠色s[3],
+                和了回数: 0,
+                河: Vec::new(),
             },
         ],
     }
