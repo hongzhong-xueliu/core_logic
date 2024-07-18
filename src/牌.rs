@@ -15,10 +15,38 @@ pub enum 色 {
     萬 = 0,
     筒 = 1,
     索 = 2,
-    中 = 3,
 }
 
 impl std::fmt::Display for 色 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::萬 => write!(f, "萬"),
+            Self::筒 => write!(f, "筒"),
+            Self::索 => write!(f, "索"),
+        }
+    }
+}
+
+impl From<色> for 色or中 {
+    fn from(色: 色) -> Self {
+        match 色 {
+            色::萬 => Self::萬,
+            色::筒 => Self::筒,
+            色::索 => Self::索,
+        }
+    }
+}
+
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum 色or中 {
+    萬 = 0,
+    筒 = 1,
+    索 = 2,
+    中 = 3,
+}
+
+impl std::fmt::Display for 色or中 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::萬 => write!(f, "萬"),
@@ -159,9 +187,9 @@ impl 牌 {
     }
 
     #[must_use]
-    pub fn 色(self) -> 色 {
+    pub fn 色or中(self) -> 色or中 {
         // u8 なので 6 bit 右シフトすることで残り 2bit。
-        // 色は2bitの取りうる値すべてをカバーするのでOK。
+        // 「色or中」は2bitの取りうる値すべてをカバーするのでOK。
         unsafe { std::mem::transmute(self.0.get() >> 6) }
     }
 
@@ -198,25 +226,25 @@ impl 牌 {
 
 impl Debug for 牌 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let 色 = self.色();
+        let 色or中 = self.色or中();
         let 数 = self.数();
         let id = self.詳細id();
-        if 色 == 色::中 {
-            write!(f, "{色}#{id}")
+        if 色or中 == 色or中::中 {
+            write!(f, "{色or中}#{id}")
         } else {
-            write!(f, "{数}{色}#{id}")
+            write!(f, "{数}{色or中}#{id}")
         }
     }
 }
 
 impl std::fmt::Display for 牌 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let 色 = self.色();
+        let 色or中 = self.色or中();
         let 数 = self.数();
-        if 色 == 色::中 {
-            write!(f, "{色}")
+        if 色or中 == 色or中::中 {
+            write!(f, "{色or中}")
         } else {
-            write!(f, "{数}{色}")
+            write!(f, "{数}{色or中}")
         }
     }
 }

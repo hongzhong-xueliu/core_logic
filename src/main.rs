@@ -359,10 +359,12 @@ fn initialize_with_全部俺() -> InitializedGameState {
     println!("|  欠色選択");
     println!("--------------------------------------------------");
 
-    let mut 欠色s: [牌::色; 4] = [牌::色::中; 4];
-    for (i, 欠色) in &mut 欠色s.iter_mut().enumerate() {
+    let mut 欠色s: Vec<牌::色> = Vec::new();
+
+    #[allow(clippy::needless_range_loop)]
+    for i in 0..4 {
         println!("\n\n========= ↓ 以下、プレイヤー{i}の選択 ↓ =========================");
-        *欠色 = loop {
+        欠色s.push(loop {
             println!("プレイヤー{i}の手牌: {:?}", 手牌s[i]);
             println!("プレイヤー{i}の欠色を入力してください。(0: 萬, 1: 筒, 2: 索)");
             let mut 欠色 = String::new();
@@ -373,7 +375,7 @@ fn initialize_with_全部俺() -> InitializedGameState {
                 continue;
             }
             break unsafe { std::mem::transmute(欠色) };
-        };
+        });
     }
     println!("プレイヤー0の欠色: {}", 欠色s[0]);
     println!("プレイヤー1の欠色: {}", 欠色s[1]);
