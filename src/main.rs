@@ -21,12 +21,9 @@ struct ToWinOnSelfDraw {
     value: bool,
 }
 
-#[derive(Debug, Deserialize)]
-struct ClientHello;
 
 #[derive(Debug, Deserialize)]
 enum ClientMessage {
-    ClientHello(ClientHello),
     Discard(Discard),
     ToWinOnSelfDraw(ToWinOnSelfDraw),
 }
