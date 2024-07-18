@@ -99,7 +99,12 @@ async fn handle_socket(mut socket: WebSocket) {
     });
 
     loop {
-        let Message::Text(m) = receiver.next().await.unwrap().unwrap() else {
+        let Some(message) = receiver.next().await else {
+            println!("WebSocket Connection has been closed!");
+            std::process::exit(1);
+        };
+
+        let Message::Text(m) = message.unwrap() else {
             continue;
         };
 
@@ -154,6 +159,8 @@ async fn main() {
             }))
             .await
             .unwrap();
+
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
             break;
         };
@@ -241,14 +248,6 @@ async fn main() {
 
             println!("捨てる牌の index を指定してください。",);
             let index = loop {
-                // let mut index = String::new();
-                // std::io::stdin().read_line(&mut index).unwrap();
-                // let index: usize = index.trim().parse().unwrap();
-                // if index > game_state.player_data[current_player].手牌.len() {
-                //     println!("index out of bounds. try again");
-                //     continue;
-                // }
-                // break index;
                 if let ClientMessage::Discard(Discard { index }) = c_rx.recv().await.unwrap() {
                     if index > game_state.player_data[current_player].手牌.len() {
                         println!("index out of bounds. try again");
